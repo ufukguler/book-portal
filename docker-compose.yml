@@ -1,0 +1,31 @@
+version: '3.5'
+networks:
+  backend:
+    name: backend
+
+services:
+  app-server-dev:
+    container_name: app-server
+    image: app-server
+    ports:
+      - '8080:8080'
+    networks:
+      - backend
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile
+  db:
+    container_name: app-server-db
+    image: mysql:5.7
+    ports:
+      - '3306:3306'
+    networks:
+      - backend
+    restart: always
+    environment:
+      - TZ=Europe/Istanbul
+      - MYSQL_ROOT_PASSWORD=Rjmku3U8cSqKBZ3D
+      - MYSQL_DATABASE=AppMedia
+      - MYSQL_USER=appmedia
+      - MYSQL_PASSWORD=ZUsgkRhH2RL88XdD

@@ -1,0 +1,9 @@
+error:
+  inactive-user: You need to confirm your e-mail address
+  mail-already-in-use: Email address is already in use
+  token-mail-no-match: Token and mail information do not match
+  incorrect-credentials: User credentials is invalid
+  facebookId-already-in-use: There are users registered with this Facebook ID
+  googleId-already-in-use: There are users registered with this Google ID
+  validity-expired: Your password reset request has expired! Please request password reset again
+  already-confirmed-email: The user has already confirmed their e-mail address

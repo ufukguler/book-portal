@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    password: ZUsgkRhH2RL88XdD
+    url: mysql://localhost:3306/AppMedia?useUnicode=yes&characterEncoding=UTF-8
+    username: appmedia
+  mail:
+    host: smtp.yandex.com
+    port: 587
+    username: appmedia.api@yandex.com
+    password: tester123++
+    properties:
+      mail:
+        smtp:
+          auth: true
+          timeout: 5000
+          writetimeout: 5000
+          connectiontimeout: 5000
+          starttls:
+            enabled: true
+            required: true
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
+  jpa:
+    hibernate:
+      ddl-auto: update
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+        connection:
+          characterEncoding: utf-8
+          CharSet: utf-8
+          useUnicode: true
+    show-sql: false
+jwt:
+  secret: fbaN4HzlqN66lWNpxQo5NcoAjONZJyC293pKCfbUoCFx9RJFnc
+server:
+  error:
+    include-exception: false
+    include-stacktrace: never
+  port: 8080
+logging:
+  pattern:
+    dateformat: yyyy-MM-dd HH:mm:ss.SSS,Europe/Istanbul
+aws:
+  accessKey: access-key
+  secretKey: secret-key
+  bucket: appmedia
+  location: eu-south-1
