@@ -11,15 +11,12 @@ import javax.validation.constraints.Size;
 public class PasswordResetDTO {
     @NotBlank
     @Email
-    @ApiModelProperty(example = "user@appmedia.com")
     private String email;
 
     @NotBlank
-    @ApiModelProperty(example = "confirmation token")
     private String key;
 
     @NotBlank
     @Size(min = 6, max = 255)
-    @ApiModelProperty(example = "123456")
     private String newPass;
 }

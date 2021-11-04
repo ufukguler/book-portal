@@ -1,9 +1,9 @@
 package com.bookportal.api.repository;
 
 import com.bookportal.api.entity.Notification;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface NotificationRepository extends JpaRepository<Notification, Long> {
+public interface NotificationRepository extends ReactiveCrudRepository<Notification, String> {
 }

@@ -3,64 +3,83 @@ package com.bookportal.api.service;
 import com.bookportal.api.entity.Book;
 import com.bookportal.api.entity.User;
 import com.bookportal.api.entity.UserBook;
+import com.bookportal.api.entity.softmodels.BookSoft;
+import com.bookportal.api.entity.softmodels.UserSoft;
+import com.bookportal.api.exception.CustomNotFoundException;
 import com.bookportal.api.model.enums.ExceptionItemsEnum;
 import com.bookportal.api.model.enums.UserBookEnum;
-import com.bookportal.api.exception.CustomNotFoundException;
 import com.bookportal.api.repository.UserBookRepository;
 import lombok.RequiredArgsConstructor;
+import org.bson.types.ObjectId;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class UserBookService {
+    private final ReactiveMongoTemplate reactiveMongoTemplate;
     private final UserBookRepository userBookRepository;
     private final UserService userService;
     private final BookService bookService;
+    private final ModelMapper modelMapper = new ModelMapper();
 
-    public UserBook save(Long bookId, Long enumId) {
-        UserBookEnum userBookEnum = getEnum(String.valueOf(enumId));
-        UserBook userBook = getUserBookObj(bookId);
-        userBook.setType(userBookEnum);
-        UserBook exist = checkIfExist(bookId, userBookEnum);
-        if (exist != null) {
-            exist.setActive(!exist.isActive());
-            return userBookRepository.save(exist);
-        }
-        return userBookRepository.save(userBook);
+    public Mono<UserBook> save(String bookId, String enumId) {
+        return getOrEmpty(bookId, getEnum(String.valueOf(enumId)))
+                .map(userBook -> {
+                    userBook.setActive(!userBook.isActive());
+                    return userBook;
+                })
+                .switchIfEmpty(initUserBookObj(bookId,enumId))
+                .flatMap(userBookRepository::save);
     }
 
-    public Map<String, Boolean> findTypesForBook(Long bookId) {
+    public Mono<Map<String, Boolean>> findTypesForBook(String bookId) {
         Map<String, Boolean> map = new HashMap<>();
-        Optional<UserBook> willRead = userBookRepository.findByUser_IdAndBook_IdAndType(getUser().getId(), bookId, UserBookEnum.WILL_READ);
-        Optional<UserBook> haveRead = userBookRepository.findByUser_IdAndBook_IdAndType(getUser().getId(), bookId, UserBookEnum.HAVE_READ);
-        map.put(UserBookEnum.WILL_READ.getValue(), false);
-        map.put(UserBookEnum.HAVE_READ.getValue(), false);
-        if (willRead.isPresent() && willRead.get().isActive()) {
-            map.put(UserBookEnum.WILL_READ.getValue(), true);
-        }
-        if (haveRead.isPresent() && haveRead.get().isActive()) {
-            map.put(UserBookEnum.HAVE_READ.getValue(), true);
-        }
-        return map;
+        return getUser().doOnNext(user -> {
+            Mono<UserBook> willReadMono = Mono.empty();//todo userBookRepository.findByUserSoft_IdAndBookSoft_IdAndType(user.getId(), bookId, UserBookEnum.WILL_READ);
+            Mono<UserBook> haveReadMono = Mono.empty();//todo userBookRepository.findByUserSoft_IdAndBookSoft_IdAndType(user.getId(), bookId, UserBookEnum.HAVE_READ);
+            willReadMono.zipWith(haveReadMono, (will, have) -> {
+                if (will.isActive()) {
+                    map.put(UserBookEnum.WILL_READ.getValue(), true);
+                }
+                if (have.isActive()) {
+                    map.put(UserBookEnum.HAVE_READ.getValue(), true);
+                }
+                return map;
+            });
+        }).map(user -> map);
     }
 
-    private UserBook checkIfExist(Long bookId, UserBookEnum userBookEnum) {
-        Long userId = getUser().getId();
-        Optional<UserBook> optional = userBookRepository.findByUser_IdAndBook_IdAndType(userId, bookId, userBookEnum);
-        return optional.orElse(null);
+    private Mono<UserBook> getOrEmpty(String bookId, UserBookEnum userBookEnum) {
+        return getUser()
+                .flatMap(user -> {
+                    Query query = new Query()
+                            .addCriteria(new Criteria("book._id").is(new ObjectId(bookId)))
+                            .addCriteria(new Criteria("type").is(userBookEnum))
+                            .addCriteria(new Criteria("user._id").is(new ObjectId(user.getId())));
+                    return reactiveMongoTemplate.findOne(query, UserBook.class);
+                }).switchIfEmpty(Mono.empty());
     }
 
-    private UserBook getUserBookObj(Long bookId) {
-        Book book = getBook(bookId);
-        User user = getUser();
-        UserBook userBook = new UserBook();
-        userBook.setBook(book);
-        userBook.setUser(user);
-        return userBook;
+    private Mono<UserBook> initUserBookObj(String bookId, String enumId) {
+        Mono<Book> bookMono = getBook(bookId);
+        Mono<User> userMono = getUser();
+
+        return bookMono.zipWith(userMono, (book, user) -> {
+            UserBook userBook = new UserBook();
+            userBook.setActive(true);
+            userBook.setType(UserBookEnum.findByValue(enumId));
+            userBook.setBook(modelMapper.map(book, BookSoft.class));
+            userBook.setUser(modelMapper.map(user, UserSoft.class));
+            return userBook;
+        });
     }
 
     private UserBookEnum getEnum(String type) {
@@ -71,15 +90,12 @@ public class UserBookService {
         throw new CustomNotFoundException(ExceptionItemsEnum.TYPE.getValue());
     }
 
-    private User getUser() {
-        Optional<User> currentUser = userService.getCurrentUser();
-        if (currentUser.isPresent()) {
-            return currentUser.get();
-        }
-        throw new CustomNotFoundException(ExceptionItemsEnum.USER.getValue());
+    private Mono<User> getUser() {
+        return userService.getCurrentUser()
+                .switchIfEmpty(Mono.error(new CustomNotFoundException(ExceptionItemsEnum.USER.getValue())));
     }
 
-    private Book getBook(Long id) {
+    private Mono<Book> getBook(String id) {
         return bookService.findByIdAndActiveTrueAndIsPublishedTrue(id);
     }
 }

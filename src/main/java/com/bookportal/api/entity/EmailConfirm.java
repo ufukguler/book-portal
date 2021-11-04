@@ -1,26 +1,22 @@
 package com.bookportal.api.entity;
 
-import lombok.Data;
+import com.bookportal.api.configs.CachingConfig;
+import com.bookportal.api.entity.softmodels.UserSoft;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
+import java.util.Date;
 
-@Entity
-@Table(name = "EMAIL_CONFIRM")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class EmailConfirm extends BaseEntity {
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
-    private User user;
-
-    @Column(name = "SECRET_KEY")
+    private UserSoft user;
     private String secretKey;
-
-
-    @Override
-    public String toString() {
-        return "Favourite{" +
-                "secretKey=" + secretKey +
-                ", user=" + user +
-                '}';
-    }
+    private Date validUntil = new Date(new Date().getTime() + CachingConfig.ONE_HOUR * 36);
 }

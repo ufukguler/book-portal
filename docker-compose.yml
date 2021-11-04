@@ -1,12 +1,22 @@
-version: '3.5'
+version: '3.9'
 networks:
   backend:
     name: backend
-
 services:
-  app-server-dev:
+  app-mongo:
+    container_name: app-mongo
+    image: 'mongo:latest'
+    restart: always
+    ports:
+      - '27017:27017'
+    networks:
+      - backend
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user-app
+      MONGO_INITDB_ROOT_PASSWORD: secret-pass
+
+  app-server:
     container_name: app-server
-    image: app-server
     ports:
       - '8080:8080'
     networks:
@@ -14,18 +24,7 @@ services:
     restart: always
     build:
       context: ./
-      dockerfile: Dockerfile
-  db:
-    container_name: app-server-db
-    image: mysql:5.7
-    ports:
-      - '3306:3306'
-    networks:
-      - backend
-    restart: always
+      dockerfile: ./Dockerfile
     environment:
-      - TZ=Europe/Istanbul
-      - MYSQL_ROOT_PASSWORD=Rjmku3U8cSqKBZ3D
-      - MYSQL_DATABASE=AppMedia
-      - MYSQL_USER=appmedia
-      - MYSQL_PASSWORD=ZUsgkRhH2RL88XdD
+      SPRING_DATA_MONGODB_HOST: app-mongo
+      SPRING_DATA_MONGODB_database: app

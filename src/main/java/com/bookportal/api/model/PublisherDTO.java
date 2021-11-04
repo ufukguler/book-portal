@@ -8,6 +8,5 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class PublisherDTO {
     @NotBlank
-    @ApiModelProperty(example = "some publisher")
     private String name;
 }

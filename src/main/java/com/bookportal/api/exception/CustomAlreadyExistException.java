@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(value = HttpStatus.CONFLICT)
 public class CustomAlreadyExistException extends RuntimeException {
     public CustomAlreadyExistException(String type) {
-        super(type + " already exists");
+        super(type);
     }
 }
 

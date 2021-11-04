@@ -1,178 +1,184 @@
 package com.bookportal.api.service;
 
 import com.bookportal.api.configs.EnvironmentVariables;
+import com.bookportal.api.entity.BaseEntity;
+import com.bookportal.api.entity.Role;
 import com.bookportal.api.entity.User;
-import com.bookportal.api.model.enums.ExceptionItemsEnum;
-import com.bookportal.api.model.enums.SocialTypeEnum;
-import com.bookportal.api.model.enums.UserRoleEnum;
+import com.bookportal.api.exception.CustomAlreadyExistException;
 import com.bookportal.api.exception.CustomNotFoundException;
-import com.bookportal.api.repository.RoleRepository;
+import com.bookportal.api.model.PasswordUpdateDTO;
+import com.bookportal.api.model.SocialDTO;
+import com.bookportal.api.model.enums.ExceptionItemsEnum;
+import com.bookportal.api.model.enums.UserRoleEnum;
 import com.bookportal.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.Objects;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class UserService {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final RoleRepository roleRepository;
     private final EnvironmentVariables env;
     private final EmailService emailService;
 
-    public Optional<User> findByJustMail(String mail) {
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public Mono<Boolean> updatePassword(String mail, String newPassword) {
+        return userRepository.findByMailAndActiveTrue(mail)
+                .switchIfEmpty(Mono.error(new CustomNotFoundException(ExceptionItemsEnum.USER.getValue())))
+                .map(user -> {
+                    user.setPassword(new BCryptPasswordEncoder().encode(newPassword));
+                    return user;
+                })
+                .flatMap(userRepository::save)
+                .map(BaseEntity::isActive);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public Mono<User> createUser(Mono<User> userMono) {
+        return userMono
+                .onErrorStop()
+                .doOnNext(user -> isMailExist(user.getMail()))
+                .map(user -> {
+                    user.setActive(false);
+                    user.setPassword(new BCryptPasswordEncoder().encode(user.getPassword()));
+                    user.setSocial(false);
+                    user.setRoles(new ArrayList<>(Collections.singletonList(Role.builder().name(UserRoleEnum.ROLE_USER.name()).build())));
+                    return user;
+                })
+                .flatMap(userRepository::save)
+                .doOnError(throwable -> {
+                    if (throwable instanceof DuplicateKeyException) {
+                        String[] cause = throwable.getMessage().split("\\{")[1].split("}")[0].split(":");
+                        String key = cause[0].substring(0, 1).toUpperCase() + cause[0].substring(1);
+                        String value = cause[1].replace("\"", "");
+                        throw new CustomAlreadyExistException("User {" + key + ":" + value + "} already exists");
+                    }
+                })
+                .doOnNext(emailService::sendEmailConfirmationLink);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public Mono<User> setUserToActive(String id) {
+        return userRepository.findById(id)
+                .switchIfEmpty(Mono.error(new CustomNotFoundException(ExceptionItemsEnum.USER.getValue())))
+                .flatMap(user -> {
+                    user.setActive(true);
+                    return userRepository.save(user);
+                });
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public Mono<User> saveGuest(Mono<User> userMono) {
+        Mono<User> notFoundUserInit = userMono
+                .map(user -> {
+                    user.setRoles(new ArrayList<>(Collections.singletonList(Role.builder()
+                            .name(UserRoleEnum.ROLE_GUEST.name())
+                            .build())));
+                    return user;
+                });
+
+        return userMono.flatMap(user -> userRepository.findByMail(user.getMail()))
+                .switchIfEmpty(notFoundUserInit)
+                .flatMap(userRepository::save);
+    }
+
+    private Mono<User> isMailExist(String mail) {
+        return userRepository.findByMail(mail)
+                .doOnNext(user1 -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, env.eMailAlreadyInUse())));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public Mono<User> createSocialUser(SocialDTO socialDto) {
+        return userRepository.findByMail(socialDto.getMail())
+                .doOnNext(user -> {
+                    if (Boolean.FALSE.equals(user.getSocial())) {
+                        user.setGoogleId(socialDto.getGoogleId());
+                        user.setFacebookId(socialDto.getFacebookId());
+                    }
+                    // update socialId's if same email
+                    if (Objects.equals(user.getGoogleId(), "") && !user.getGoogleId().equals(socialDto.getGoogleId())) {
+                        user.setGoogleId(socialDto.getGoogleId());
+                    }
+                    if (Objects.equals(user.getFacebookId(), "") && !user.getFacebookId().equals(socialDto.getFacebookId())) {
+                        user.setFacebookId(socialDto.getFacebookId());
+                    }
+                })
+                .switchIfEmpty(initSocialUser(Mono.just(socialDto)))
+                .flatMap(userRepository::save);
+    }
+
+    private Mono<Boolean> isOldPasswordValid(String oldPassword) {
+        return getCurrentUser()
+                .map(user -> new BCryptPasswordEncoder().matches(oldPassword, user.getPassword()));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public Mono<Boolean> updatePasswordOnRequest(Mono<PasswordUpdateDTO> updateDTOMono) {
+        return updateDTOMono
+                .filter(dto -> dto.getNewPassword().equals(dto.getNewPassword2()))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, env.passwordsNotMatching())))
+                .flatMap(dto -> isOldPasswordValid(dto.getOldPassword())
+                        .filter(Boolean.TRUE::equals)
+                        .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, env.currentPasswordIsNotValid())))
+                        .flatMap(aBoolean -> getCurrentUser().flatMap(user -> updatePassword(user.getMail(), dto.getNewPassword())))
+                        .map(aBoolean -> aBoolean));
+    }
+
+    public Mono<User> findByJustMail(String mail) {
         return userRepository.findByMail(mail);
     }
 
-    public Optional<User> findByIdAndActiveTrue(Long id) {
+    public Mono<User> findByIdAndActiveTrue(String id) {
         return userRepository.findByIdAndActiveTrue(id);
     }
 
-    public Optional<User> findByMail(String mail) {
+    public Mono<User> findByMail(String mail) {
         return userRepository.findByMailAndActiveTrue(mail);
     }
 
-    public Optional<User> findBySocialId(String socialId) {
-        return userRepository.findByGoogleIdOrFacebookId(socialId, socialId);
-    }
-
-    public Optional<User> findByMailAndActiveFalse(String mail) {
+    public Mono<User> findByMailAndActiveFalse(String mail) {
         return userRepository.findByMailAndActiveFalse(mail);
     }
 
-    public Optional<User> getCurrentUser() {
-        return userRepository.findByMailAndActiveTrue(SecurityContextHolder.getContext().getAuthentication().getName());
+    public Mono<User> getCurrentUser() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .map(Authentication::getName)
+                .flatMap(userRepository::findByMailAndActiveTrue)
+                .doOnError(ex -> {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Error while getting user data");
+                });
     }
 
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public boolean updatePassword(String mail, String password) {
-        Optional<User> byMail = userRepository.findByMailAndActiveTrue(mail);
-        if (byMail.isPresent()) {
-            User user = byMail.get();
-            user.setPassword(passwordEncoder.encode(password));
-            userRepository.save(user);
-            return true;
-        }
-        throw new CustomNotFoundException(ExceptionItemsEnum.USER.getValue());
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User createUser(User user) {
-        isMailExist(user.getMail());
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setSocial(false);
-        user.setRoles(Collections.singletonList(roleRepository.findByName(UserRoleEnum.ROLE_USER.name())));
-        User savedUser = userRepository.save(user);
-        User userToInactive = setUserToInactive(savedUser.getId());
-        sendconfirmationEmail(userToInactive);
-        return userToInactive;
-    }
-
-    private void sendconfirmationEmail(User user) {
-        emailService.sendEmailConfirmationLink(user);
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User setUserToInactive(Long id) {
-        Optional<User> user = userRepository.findByIdAndActiveTrue(id);
-        if (user.isPresent()) {
-            userRepository.setToInactive(id);
-            user.get().setActive(false); // not updating because of the transaction.. so hardcoded
-            return user.get();
-        }
-        throw new CustomNotFoundException(ExceptionItemsEnum.USER.getValue());
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User setUserToActive(Long id) {
-        Optional<User> user = userRepository.findById(id);
-        if (user.isPresent()) {
-            userRepository.setToActive(id);
-            user.get().setActive(true); // not updating because of the transaction.. so hardcoded
-            return user.get();
-        }
-        throw new CustomNotFoundException(ExceptionItemsEnum.USER.getValue());
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User saveGuest(User user) {
-        Optional<User> byMail = userRepository.findByMail(user.getMail());
-        if (byMail.isPresent()) {
-            return byMail.get();
-        }
-        user.setPassword(passwordEncoder.encode(generateRandomPassword()));
-        user.setRoles(Collections.singletonList(roleRepository.findByName(UserRoleEnum.ROLE_GUEST.name())));
-        return userRepository.save(user);
-    }
-
-    private void isMailExist(String mail) {
-        if (userRepository.findByMail(mail).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, env.eMailAlreadyInUse());
-        }
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User createSocialUser(User user) {
-        isMailExist(user.getMail());
-        isFacebookIdExist(user.getFacebookId());
-        isGoogleIdExist(user.getGoogleId());
-        user.setPassword(passwordEncoder.encode(generateRandomPassword()));
-        user.setRoles(Collections.singletonList(roleRepository.findByName(UserRoleEnum.ROLE_USER.name())));
-        setSocialId(user);
-        return userRepository.save(user);
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User updateSocialId(User user, SocialTypeEnum typeEnum, String id) {
-        if (typeEnum.equals(SocialTypeEnum.FACEBOOK)) {
-            isFacebookIdExist(user.getFacebookId());
-            user.setFacebookId(id);
-        } else {
-            isGoogleIdExist(user.getGoogleId());
-            user.setGoogleId(id);
-        }
-        return userRepository.save(user);
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
-    public User updateUserMail(User user, String mail) {
-        user.setMail(mail);
-        return userRepository.save(user);
-    }
-
-    private String generateRandomPassword() {
-        return UUID.randomUUID().toString();
-    }
-
-    private void setSocialId(User user) {
-        if (user.getGoogleId() != null && user.getSocialType().equals(SocialTypeEnum.GOOGLE.getValue())) {
-            user.setGoogleId(user.getGoogleId());
-        } else if (user.getFacebookId() != null && user.getSocialType().equals(SocialTypeEnum.FACEBOOK.getValue())) {
-            user.setFacebookId(user.getFacebookId());
-        }
-    }
-
-    private boolean isFacebookIdExist(String facebookId) {
-        if (facebookId != null && userRepository.findByFacebookId(facebookId).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, env.facebookIdAlreadyInUse());
-        }
-        return false;
-    }
-
-    private boolean isGoogleIdExist(String googleId) {
-        if (googleId != null && userRepository.findByGoogleId(googleId).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, env.googleIdAlreadyInUse());
-        }
-        return false;
+    private Mono<User> initSocialUser(Mono<SocialDTO> socialDTOMono) {
+        return socialDTOMono.map(socialDTO -> {
+            User user = new User();
+            user.setFacebookId(socialDTO.getFacebookId());
+            user.setGoogleId(socialDTO.getGoogleId());
+            user.setMail(socialDTO.getMail());
+            user.setName(socialDTO.getName());
+            user.setSurname(socialDTO.getSurname());
+            user.setPpUrl(socialDTO.getPpUrl());
+            user.setActive(true);
+            user.setRoles(new ArrayList<>(Collections
+                    .singletonList(Role.builder().name(UserRoleEnum.ROLE_USER.name()).build())));
+            return user;
+        });
     }
 }

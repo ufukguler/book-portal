@@ -11,12 +11,11 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 public class BookDTO {
     @NotBlank
-    @ApiModelProperty(example = "title")
-    private String title;
+    private String name;
 
     @NotNull
     @ApiModelProperty(example = "[1]")
-    private Long[] authorIds;
+    private String[] authorIds;
 
     @NotNull
     @ApiModelProperty(example = "250")
@@ -24,13 +23,13 @@ public class BookDTO {
 
     @NotNull
     @ApiModelProperty(example = "1")
-    private Long publisherId;
+    private String publisherId;
 
     @NotNull
     @ApiModelProperty(example = "2000")
     private int year;
 
-    @ApiModelProperty(example = "image url")
+    @ApiModelProperty
     private String imageUrl;
 
     @ApiModelProperty(example = "tag")

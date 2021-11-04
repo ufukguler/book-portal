@@ -1,55 +1,38 @@
 package com.bookportal.api.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-import java.util.List;
+import java.util.ArrayList;
 
-@Entity
-@Table(name = "USER")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class User extends BaseEntity {
-
-    @Column(name = "NAME")
     private String name;
-
-    @Column(name = "SURNAME")
     private String surname;
+    private String ppUrl;
+    private ArrayList<Role> roles;
+    private Boolean social;
 
-    @Column(name = "MAIL", unique = true, nullable = false)
+    @Indexed(unique = true)
     private String mail;
 
-    @Column(name = "PASSWORD", nullable = false)
     @JsonIgnore
     private String password;
 
-    @Column(name = "SOCIAL")
-    private boolean social = false;
-
-    @Column(name = "SOCIAL_TYPE")
-    private String socialType;
-
-    @Column(name = "GOOGLE_ID", unique = true)
+    @Indexed(unique = true)
     private String googleId;
 
-    @Column(name = "FACEBOOK_ID", unique = true)
+    @Indexed(unique = true)
     private String facebookId;
-
-    @Column(name = "PP_URL")
-    private String ppUrl;
-
-    @ManyToMany(
-            cascade = CascadeType.DETACH,
-            fetch = FetchType.EAGER
-    )
-    @JoinTable(
-            name = "USER_ROLES",
-            joinColumns = @JoinColumn(name = "USER_ID"),
-            inverseJoinColumns = @JoinColumn(name = "ROLE_ID")
-    )
-    @JsonIgnore
-    private List<Role> roles;
 
     @Override
     public String toString() {

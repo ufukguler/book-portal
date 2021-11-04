@@ -10,11 +10,10 @@ import javax.validation.constraints.Size;
 @Data
 public class CommentDTO {
     @NotBlank
-    @ApiModelProperty(example = "comment")
-    @Size(max = 999)
+    @ApiModelProperty
     private String comment;
 
     @NotNull
     @ApiModelProperty(example = "1")
-    private Long bookId;
+    private String bookId;
 }

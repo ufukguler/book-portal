@@ -1,23 +1,20 @@
 package com.bookportal.api.entity;
 
-import lombok.Data;
+import com.bookportal.api.entity.softmodels.UserSoft;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.Entity;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
-
-@Entity
-@Table(name = "QUOTE_FAVOURITE")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class Favourite extends BaseEntity {
-    @OneToOne
-    @JoinColumn(name = "QUOTE_ID", referencedColumnName = "ID")
     private Quote quote;
-
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
-    private User user;
+    private UserSoft user;
 
     @Override
     public String toString() {

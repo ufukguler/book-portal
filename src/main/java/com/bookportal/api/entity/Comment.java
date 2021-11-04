@@ -1,25 +1,22 @@
 package com.bookportal.api.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
+import com.bookportal.api.entity.softmodels.BookSoft;
+import com.bookportal.api.entity.softmodels.UserSoft;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "BOOK_COMMENT")
-@Data
-public class Comment extends BaseEntity {
-    @Column(name = "COMMENT", length = 999)
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
+public class Comment extends BaseEntityInactive {
     private String comment;
-
-    @OneToOne
-    @JoinColumn(name = "BOOK_ID", referencedColumnName = "ID")
-    private Book book;
-
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
-    @JsonIgnore
-    private User user;
+    private BookSoft book;
+    private UserSoft user;
 
     @Override
     public String toString() {

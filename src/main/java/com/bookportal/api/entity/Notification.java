@@ -1,21 +1,19 @@
 package com.bookportal.api.entity;
 
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "NOTIFICATION")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class Notification extends BaseEntity {
-    @Column(name = "SUBJECT")
     private String subject;
-
-    @Column(name = "COMMENT")
     private String comment;
-
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
     private User user;
 
     @Override

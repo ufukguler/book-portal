@@ -1,57 +1,36 @@
 package com.bookportal.api.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
-@MappedSuperclass
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class BaseEntity implements Serializable {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
-    private Long id;
+    private String id;
 
-    @Column(name = "CREATE_DATE")
-    @JsonIgnore
-    private Date createDate;
+    private Date createDate = new Date();
 
-    @Column(name = "UPDATE_DATE")
     @JsonIgnore
+    @LastModifiedDate
     private Date updateDate;
 
-    @Column(name = "ACTIVE")
-    private boolean active;
+    private boolean active = true;
 
-    @Column(name = "OPERATION_TYPE")
     @JsonIgnore
     private String operationType;
-
-    @PrePersist
-    public void onPrePersist() {
-        this.setOperationType("SAVE");
-        this.setCreateDate(new Date());
-        this.setUpdateDate(new Date());
-        this.setActive(true);
-    }
-
-    @PreUpdate
-    public void onPreUpdate() {
-        this.setOperationType("UPDATE");
-        this.setUpdateDate(new Date());
-    }
-
-    @PreRemove
-    public void onPreRemove() {
-        this.setOperationType("DELETE");
-        this.setUpdateDate(new Date());
-        this.setActive(false);
-    }
 
     @Override
     public String toString() {

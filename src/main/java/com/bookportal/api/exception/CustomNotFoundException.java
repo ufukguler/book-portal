@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class CustomNotFoundException extends RuntimeException {
 
     public CustomNotFoundException(String type) {
-        super(type + " not found.");
+        super(type);
     }
 }

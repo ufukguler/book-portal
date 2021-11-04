@@ -1,12 +1,12 @@
 package com.bookportal.api.repository;
 
 import com.bookportal.api.entity.EmailConfirm;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.Optional;
+import reactor.core.publisher.Mono;
 
 @Repository
-public interface EmailConfirmRepository extends JpaRepository<EmailConfirm, Long> {
-    Optional<EmailConfirm> findBySecretKeyAndActiveTrue(String secretKey);
+public interface EmailConfirmRepository extends ReactiveCrudRepository<EmailConfirm, String> {
+    Mono<EmailConfirm> findBySecretKeyAndActiveTrue(String secretKey);
+    Mono<EmailConfirm> findByUser_IdAndActiveTrue(String id);
 }

@@ -1,18 +1,19 @@
 package com.bookportal.api.entity;
 
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "APP_REVIEW")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class Review extends BaseEntity {
-    @Column(name = "REVIEW")
     private String review;
 
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
     private User user;
 
     @Override

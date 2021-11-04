@@ -1,23 +1,21 @@
 package com.bookportal.api.entity;
 
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
 import java.util.Date;
 
-@Entity
-@Table(name = "PASSWORD_RESET")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class PasswordReset extends BaseEntity {
-
-    @Column(name = "SECRET_KEY")
     private String secretKey;
-
-    @Column(name = "VALIDITY")
     private Date validity;
-
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
     private User user;
 
     @Override

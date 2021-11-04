@@ -1,26 +1,22 @@
 package com.bookportal.api.entity;
 
+import com.bookportal.api.entity.softmodels.BookSoft;
 import com.bookportal.api.model.enums.HomePageEnum;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "HOMEPAGE")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class HomePage extends BaseEntity {
-
-    @Column(name = "TYPE", nullable = false)
     private HomePageEnum type;
-
-    @OneToOne
-    @JoinColumn(name = "BOOK_ID", referencedColumnName = "ID")
-    private Book book;
-
-    @Column(name = "IMAGE_URL")
+    private BookSoft book;
     private String imageUrl;
-
-    @Column(name = "DESCRIPTION")
     private String description;
 
     @Override

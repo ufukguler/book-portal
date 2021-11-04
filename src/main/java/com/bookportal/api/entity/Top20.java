@@ -1,20 +1,23 @@
 package com.bookportal.api.entity;
 
-import lombok.Data;
+import com.bookportal.api.entity.softmodels.BookSoft;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "TOP20")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class Top20 {
     @Id
-    @Column(name = "BOOK_ID")
-    private Long bookId;
-
-    @Column(name = "AVERAGE")
-    private double average;
-
-    @Column(name = "WR")
-    private double wr;
+    private String id;
+    private BookSoft book;
+    private float average;
+    private float wr;
+    private float totalVoteCount;
 }

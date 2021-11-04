@@ -1,9 +1,8 @@
 package com.bookportal.api.configs;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.bookportal.api.service.Top20Service;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -14,20 +13,19 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Configuration
 @EnableCaching
 @EnableScheduling
+@RequiredArgsConstructor
 public class CachingConfig {
-    private static final Logger log = LoggerFactory.getLogger(CachingConfig.class);
-    private static final long ONE_HOUR = 3600000L;
-    private static final long FOUR_HOUR = 14400000L;
-    private static final long TWELVE_DAY = 43200000L;
+    private final Top20Service top20Service;
+    public static final long ONE_HOUR = 3600000L;
+    private static final long TWELVE_HOUR = 12 * 3600000L;
 
     @Bean
     public CacheManager cacheManager() {
         return new ConcurrentMapCacheManager("homePage");
     }
 
-    @Scheduled(fixedRate = FOUR_HOUR)
-    @CacheEvict(value = {"homePage"})
-    public void clearCache() {
-        log.info("Cache {homePage} deleted.");
+    @Scheduled(fixedRate = TWELVE_HOUR)
+    public void updateTop20() {
+        top20Service.updateTop20();
     }
 }

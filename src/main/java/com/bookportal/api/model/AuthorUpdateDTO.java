@@ -8,13 +8,13 @@ import javax.validation.constraints.NotBlank;
 @Data
 public class AuthorUpdateDTO {
     @NotBlank
-    @ApiModelProperty(example = "name surname")
+    @ApiModelProperty
     private String name;
 
     @NotBlank
-    @ApiModelProperty(example = "about")
+    @ApiModelProperty
     private String about;
 
-    @ApiModelProperty(example = "image Url")
+    @ApiModelProperty
     private String imageUrl;
 }

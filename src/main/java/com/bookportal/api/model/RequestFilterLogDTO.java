@@ -13,5 +13,4 @@ public class RequestFilterLogDTO {
     private String requestType;
     private String message;
     private String ip_address;
-
 }

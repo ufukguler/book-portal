@@ -1,32 +1,21 @@
 package com.bookportal.api.entity;
 
-
+import com.bookportal.api.entity.softmodels.BookSoft;
+import com.bookportal.api.entity.softmodels.UserSoft;
 import com.bookportal.api.model.enums.UserBookEnum;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-
-@Entity
-@Table(name = "USER_BOOK_READ")
-@Data
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Document
 public class UserBook extends BaseEntity {
-    @OneToOne
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
-    private User user;
-
-    @OneToOne
-    @JoinColumn(name = "BOOK_ID", referencedColumnName = "ID")
-    private Book book;
-
-    @Column(name = "TYPE", nullable = false)
+    private UserSoft user;
+    private BookSoft book;
     private UserBookEnum type;
-
-    @Override
-    public String toString() {
-        return "UserBook{" +
-                "user=" + user.getMail() +
-                ", book=" + book.getId() + '-' + book.getName() +
-                ", type=" + type +
-                '}';
-    }
 }

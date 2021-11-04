@@ -1,6 +1,7 @@
 package com.bookportal.api.service;
 
-import com.bookportal.api.entity.EmailConfirm;
+import com.bookportal.api.configs.EnvironmentVariables;
+import com.bookportal.api.entity.PasswordReset;
 import com.bookportal.api.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,41 +17,55 @@ import java.util.Date;
 public class EmailService {
     private final EmailConfirmService emailConfirmService;
     private final JavaMailSender emailSender;
+    private final EnvironmentVariables env;
+    private final TemplateService templateService;
+
     @Value("${spring.mail.username}")
     String mailAccountName;
     @Value("${server.port}")
     String port;
+    @Value("${app.url}")
+    String serverUrl;
 
 
-    public void sendPasswordResetLink(String name, String to, String text) {
-        MimeMessagePreparator mailMessage = mimeMessage -> {
-            MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            message.setSentDate(new Date());
-            message.setFrom(mailAccountName, "AppMedia");
-            message.setTo(to);
-            message.setSubject("AppMedia Password Reset");
-            message.setText(generateMailBody(to, text));
-        };
-        emailSender.send(mailMessage);
+    public void sendPasswordResetLink(PasswordReset passResetObj) {
+        new Thread(() -> {
+            String mail = passResetObj.getUser().getMail();
+            MimeMessagePreparator mailMessage = mimeMessage -> {
+                MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+                message.setSentDate(new Date());
+                message.setFrom(mailAccountName, env.mailFrom());
+                message.setTo(mail);
+                message.setSubject(env.passwordResetMailSubject());
+                message.setText(generatePassResetText(mail, passResetObj.getSecretKey()));
+            };
+            emailSender.send(mailMessage);
+        }).start();
     }
 
     public void sendEmailConfirmationLink(User user) {
-        EmailConfirm emailConfirm = emailConfirmService.generateEmailConfirmationKey(user);
-        String key = emailConfirm.getSecretKey();
-
-        MimeMessagePreparator mailMessage = mimeMessage -> {
-            MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            message.setSentDate(new Date());
-            message.setFrom(mailAccountName, "AppMedia");
-            message.setTo(emailConfirm.getUser().getMail());
-            message.setSubject("AppMedia Account Confirmation");
-            message.setText(generateMailBody(emailConfirm.getUser().getMail(), key));
-        };
-        emailSender.send(mailMessage);
+        emailConfirmService.generateEmailConfirmationKey(user)
+                .doOnNext(emailConfirm -> {
+                    String key = emailConfirm.getSecretKey();
+                    MimeMessagePreparator mailMessage = mimeMessage -> {
+                        MimeMessageHelper message = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+                        message.setSentDate(new Date());
+                        message.setFrom(mailAccountName, env.mailFrom());
+                        message.setTo(emailConfirm.getUser().getMail());
+                        message.setSubject(env.verifyAccountMailSubject());
+                        String confirmUrl = generateConfirmUrl(emailConfirm.getUser().getMail(), key);
+                        message.setText(templateService.generateConfirmEmailTemplate(confirmUrl), true);
+                    };
+                    emailSender.send(mailMessage);
+                }).subscribe();
     }
 
-    private String generateMailBody(String to, String key) {
-        String url = "http://localhost:" + port;
+    private String generateConfirmUrl(String to, String key) {
+        String url = serverUrl + ":" + port;
         return url + "/sendMail/confirmEmail?key=" + key + "&email=" + to;
+    }
+
+    private String generatePassResetText(String to, String key) {
+        return "Mail adresi: " + to + "  Key:" + key;
     }
 }

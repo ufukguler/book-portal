@@ -9,9 +9,6 @@ import javax.validation.constraints.Size;
 
 @Data
 public class CategoryDTO {
-    @Size(min = 3)
-    @NotNull
     @NotBlank
-    @ApiModelProperty(example = "category")
-    private String category;
+    private String name;
 }
