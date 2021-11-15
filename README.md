@@ -23,10 +23,10 @@ docker-compose up -d
 - Send password reset link via e-mail
 - CRUD >>> author, publisher, book, quote, category, comment
 - Add, delete quote to favourite list
-- Vote a book, 
+- Vote a book, like a quote
 - Add a book to will read / have read list
-- Get user2s favourite quotes, voted books
+- Get user's liked quotes, voted books
 
 ### other unnecessary informations
-- 20 mongoDb collection
+- 20 mongoDb collections
 - 55 endpoints
