@@ -1,12 +1,16 @@
 # Book Portal API ~ reactive
 
+### mysql option is available on `mysql`branch
+> https://github.com/ufukguler/book-portal-api/tree/mysql
+
+## Checkout Swagger on Heroku
 > https://book-portal-api.herokuapp.com/swagger-ui.html
 
-### Run with maven
+#### Run with maven
 ```
 mvn spring-boot:run
 ```
-### or Docker
+#### or Docker
 ```
 docker-compose up -d
 ```
