@@ -1,8 +1,9 @@
 # Book Portal API ~ reactive
 
+> https://book-portal-api.herokuapp.com/swagger-ui.html
+
 ### Run with maven
 ```
-mvn clean install
 mvn spring-boot:run
 ```
 ### or Docker
