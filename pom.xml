@@ -128,4 +128,48 @@
             </plugin>
         </plugins>
     </build>
+
+<profiles>
+    <profile>
+        <id>proguard</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>com.github.wvengen</groupId>
+                    <artifactId>proguard-maven-plugin</artifactId>
+                    <version>2.5.3</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>proguard</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <injar>${project.build.finalName}.jar</injar>
+                        <outjar>${project.build.finalName}.jar</outjar>
+                        <obfuscate>true</obfuscate>
+                        <proguardInclude>proguard.conf</proguardInclude>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                            <configuration>
+                                <mainClass>com.bookportal.api.AppMediaApplication</mainClass>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
+
 </project>
